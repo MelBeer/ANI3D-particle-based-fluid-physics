@@ -36,3 +36,4 @@ scene/build/
 
 #Visual Studio
 scene/.vscode/
+.vscode/

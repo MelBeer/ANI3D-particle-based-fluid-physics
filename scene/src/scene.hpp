@@ -1,16 +1,15 @@
 #pragma once
 
-
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
 
-#include "simulation/simulation.hpp"
+#include "implicit_surface/implicit_surface.hpp"
 
 using cgp::mesh_drawable;
 
 
 struct gui_parameters {
-	bool display_frame = true;
+	bool display_frame = false;
 	bool add_sphere = true;
 };
 
@@ -33,8 +32,11 @@ struct scene_structure : scene_inputs_generic {
 	// Elements and shapes of the scene
 	// ****************************** //
 	cgp::timer_event_periodic timer;
-	std::vector<particle_structure> particles;
-	cgp::mesh_drawable sphere;
+	float isovalue = 0.5f;
+	implicit_surface_structure implicit_surface; // Structures used for the implicit surface (*)
+	field_function_structure field_function;     // A Parametric function used to generate the discrete field (*)
+	int h_size = 12;
+	cgp::grid_3D<std::vector<int>> hash_grid;
 	cgp::curve_drawable cube_wireframe;
 	std::vector<cgp::vec3> cube_faces;
 	std::vector<cgp::vec3> cube_normals;
@@ -45,6 +47,7 @@ struct scene_structure : scene_inputs_generic {
 	// Functions
 	// ****************************** //
 
+	void init_border_cube(int s);
 	void initialize();    // Standard initialization to be called before the animation loop
 	void display_frame(); // The frame display to be called within the animation loop
 	void display_gui();   // The display of the GUI, also called within the animation loop
@@ -54,9 +57,8 @@ struct scene_structure : scene_inputs_generic {
 	void keyboard_event();
 	void idle_frame();
 
-	void emit_particle();
+	void emit_particle(bool force_emission);
 	void simulation_step(float dt);
-	void sphere_display();
 };
 
 
