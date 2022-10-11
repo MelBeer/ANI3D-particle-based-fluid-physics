@@ -2,26 +2,25 @@
 
 using namespace cgp;
 
-#define NB_FACE 6
-
 #define ALPHA 0.8f
 #define BETA 0.8f
 #define MU 0.2f
 #define EPSILON 0.001f
 
-void simulate(std::vector<particle_structure>& particles, 
-              cgp::grid_3D<std::vector<int>> hash_grid,
+bool simulate(std::vector<particle_structure>& particles, 
+              cgp::grid_3D<std::vector<int>> &hash_grid,
               std::vector<cgp::vec3> faces,
               std::vector<cgp::vec3> normals,
               float dt)
 {
+	bool changed = false;
 	vec3 const g = { 0,0,-9.81f };
 
 	for (size_t kx = 0; kx < hash_grid.dimension.x; kx++) {
 		for (size_t ky = 0; ky < hash_grid.dimension.y; ky++) {
 			for (size_t kz = 0; kz < hash_grid.dimension.z; kz++) {
 				
-				std::vector<int> &particles_indices = hash_grid(kx, ky, kz);
+				std::vector<int> particles_indices = hash_grid(kx, ky, kz);
 
 				// For each particle in this cell kx,ky,kz
 				for (size_t pi = 0; pi < particles_indices.size(); pi++)
@@ -31,6 +30,7 @@ void simulate(std::vector<particle_structure>& particles,
 					particle_structure& part = particles[k];
 
 					vec3 const f = part.m * g;
+					vec3 save_pos = part.p;
 
 					// For every other Particle (all but k)
 					for (size_t pj = 0; pj < particles_indices.size(); pj++)
@@ -64,8 +64,9 @@ void simulate(std::vector<particle_structure>& particles,
 							part_1.p -= d/2 * u;
 						}
 					}
+					
 
-					for (size_t i = 0; i < NB_FACE; i++)
+					for (size_t i = 0; i < faces.size(); i++)
 					{
 						double dist = dot(part.p - faces[i], normals[i]);
 						if (dist <= part.r)
@@ -77,6 +78,11 @@ void simulate(std::vector<particle_structure>& particles,
 
 					part.v = (1 - 0.9f * dt) * part.v + dt * f;
 					part.p = part.p + dt * part.v;
+
+					if (k == 0)
+						std::cout << part.p << std::endl;
+
+					changed = changed || (part.p.x != save_pos.x || part.p.y != save_pos.y || part.p.z != save_pos.z);
 				}
 
 				particles_indices.clear();
@@ -94,4 +100,6 @@ void simulate(std::vector<particle_structure>& particles,
 
 		hash_grid(n_kx, n_ky, n_kz).push_back(i);
 	}
+
+	return changed;
 }

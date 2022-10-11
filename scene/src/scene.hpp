@@ -35,8 +35,6 @@ struct scene_structure : scene_inputs_generic {
 	float isovalue = 0.5f;
 	implicit_surface_structure implicit_surface; // Structures used for the implicit surface (*)
 	field_function_structure field_function;     // A Parametric function used to generate the discrete field (*)
-	int h_size = 12;
-	cgp::grid_3D<std::vector<int>> hash_grid;
 	cgp::curve_drawable cube_wireframe;
 	std::vector<cgp::vec3> cube_faces;
 	std::vector<cgp::vec3> cube_normals;
@@ -57,7 +55,7 @@ struct scene_structure : scene_inputs_generic {
 	void keyboard_event();
 	void idle_frame();
 
-	void emit_particle(bool force_emission);
+	void emit_particle();
 	void simulation_step(float dt);
 };
 

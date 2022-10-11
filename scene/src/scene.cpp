@@ -31,7 +31,7 @@ void scene_structure::initialize()
 
 	init_border_cube(cube_border_size);
 
-	hash_grid = grid_3D<std::vector<int>>(h_size);
+	field_function.hash_grid = grid_3D<std::vector<int>>(field_function.h_size);
 	
 	// Initialization for the Implicit Surface
 	// ***************************************** //
@@ -42,7 +42,6 @@ void scene_structure::initialize()
 	implicit_surface.set_domain(samples, cube_length);
 	implicit_surface.drawable_param.shape.material.color = {0.16,0.56,0.96};
 	
-	emit_particle(true);
 	implicit_surface.update_field(field_function, isovalue);
 }
 
@@ -62,7 +61,7 @@ void scene_structure::display_frame()
 
 	// Create a new particle if needed
 	if (field_function.particles.size() < field_function.max_particles)
-		emit_particle(false);
+		emit_particle();
 
 	// Rotates or Translates cube data through inputs
 	float const dt = 0.01f * timer.scale;
@@ -93,10 +92,11 @@ void scene_structure::display_frame()
 	}
 
 	// Call the simulation of the particle system
-	simulate(field_function.particles, hash_grid, cube_faces, cube_normals, dt);
+	bool changed = simulate(field_function.particles, field_function.hash_grid, cube_faces, cube_normals, dt);
 
 	// Recompute the implicit surface
-	implicit_surface.update_field(field_function, isovalue);
+	if (changed)
+		implicit_surface.update_field(field_function, isovalue);
 
 	// Display the implicit surface
 	draw(implicit_surface.drawable_param.shape, environment);
@@ -108,24 +108,26 @@ void scene_structure::display_frame()
 		draw(global_frame, environment);
 }
 
-void scene_structure::emit_particle(bool force_emission)
+void scene_structure::emit_particle()
 {
 	// Emit particle with random velocity
 	//  Assume first that all particles have the same radius and mass
 	static numarray<vec3> const color_lut = { {1,0,0},{0,1,0},{0,0,1},{1,1,0},{1,0,1},{0,1,1} };
-	if ((timer.event && gui.add_sphere) || force_emission) {
+	if (timer.event && gui.add_sphere) {
 		float const theta = rand_interval(0, 2 * Pi);
 		vec3 const v = vec3(1.0f * std::cos(theta), 1.0f * std::sin(theta), 4.0f);
 
 		particle_structure particle;
 		particle.p = { 0,0,0 };
-		particle.r = 0.13f;
+		particle.r = 0.08f;
 		particle.c = {0.16,0.56,0.96}; // color_lut[int(rand_interval() * color_lut.size())];
 		particle.v = v;
 		particle.m = 1.0f; //
 
 		field_function.particles.push_back(particle);
-		hash_grid(h_size / 2, h_size / 2, h_size / 2).push_back(field_function.particles.size() - 1);
+		field_function.hash_grid(field_function.h_size / 2, 
+								 field_function.h_size / 2, 
+								 field_function.h_size / 2).push_back(field_function.particles.size() - 1);
 	}
 }
 
