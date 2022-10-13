@@ -7,30 +7,51 @@ using namespace cgp;
 #define MU 0.2f
 #define EPSILON 0.001f
 
-bool simulate(std::vector<particle_structure>& particles, 
-              cgp::grid_3D<std::vector<int>> &hash_grid,
-              std::vector<cgp::vec3> faces,
-              std::vector<cgp::vec3> normals,
-              float dt)
+template <class T>
+int3 grid_indices_from_pos(grid_3D<T> grid, vec3 pos) {
+	int kx = (pos.x + 1 - EPSILON) * grid.dimension.x / 2;
+	int ky = (pos.y + 1 - EPSILON) * grid.dimension.y / 2;
+	int kz = (pos.z + 1 - EPSILON) * grid.dimension.z / 2;
+
+	if (kx < 0 || ky < 0 || kz < 0)
+		std::cout << "HEEELP !! pos = " << pos << std::endl;
+
+	return { kx, ky, kz };
+};
+
+std::vector<int3> simulate(std::vector<particle_structure>& particles, 
+						   cgp::grid_3D<std::vector<int>> &hash_grid,
+						   std::vector<cgp::vec3> faces,
+						   std::vector<cgp::vec3> normals,
+						   float dt)
 {
-	bool changed = false;
+	std::vector<int3> occupied_cells;
 	vec3 const g = { 0,0,-9.81f };
 
+	std::vector<bool> seen(particles.size(), false);
+	
 	for (size_t kx = 0; kx < hash_grid.dimension.x; kx++) {
 		for (size_t ky = 0; ky < hash_grid.dimension.y; ky++) {
 			for (size_t kz = 0; kz < hash_grid.dimension.z; kz++) {
 				
-				std::vector<int> particles_indices = hash_grid(kx, ky, kz);
+				std::vector<int> &particles_indices = hash_grid(kx, ky, kz);
+
+				/*
+					TODO : check for surrounding cells as well
+				*/
 
 				// For each particle in this cell kx,ky,kz
 				for (size_t pi = 0; pi < particles_indices.size(); pi++)
 				{
 					int k = particles_indices[pi];
+
+					if (seen[k]) continue;
+					seen[k] = true;
 					
 					particle_structure& part = particles[k];
+					vec3 savep = part.p;
 
 					vec3 const f = part.m * g;
-					vec3 save_pos = part.p;
 
 					// For every other Particle (all but k)
 					for (size_t pj = 0; pj < particles_indices.size(); pj++)
@@ -39,6 +60,9 @@ bool simulate(std::vector<particle_structure>& particles,
 						if (j == k) continue;
 
 						particle_structure& part_1 = particles[j];
+						if (part.p.x == part_1.p.x && part.p.y == part_1.p.y && part.p.z == part_1.p.z)
+							part_1.p += 0.000001f;
+						vec3 savep1 = part_1.p;
 						// If they collide
 						if (norm(part.p - part_1.p) <= (part.r + part_1.r) + EPSILON)
 						{
@@ -62,8 +86,14 @@ bool simulate(std::vector<particle_structure>& particles,
 							float d = part.r + part_1.r + EPSILON - norm(part.p - part_1.p);
 							part.p += d/2 * u;
 							part_1.p -= d/2 * u;
+
+							if (part.p.x != part.p.x) 
+								std::cout << "savep = " << savep << " | savep1 = " << savep1 << " | " << __LINE__ << std::endl;
 						}
 					}
+
+					if (part.p.x != part.p.x) 
+						std::cout << "savep = " << savep << " | " << __LINE__ << std::endl;
 					
 
 					for (size_t i = 0; i < faces.size(); i++)
@@ -76,30 +106,28 @@ bool simulate(std::vector<particle_structure>& particles,
 						}
 					}
 
+					if (part.p.x != part.p.x) 
+						std::cout << "savep = " << savep << " | " << __LINE__ << std::endl;
+
 					part.v = (1 - 0.9f * dt) * part.v + dt * f;
 					part.p = part.p + dt * part.v;
 
-					if (k == 0)
-						std::cout << part.p << std::endl;
+					if (part.p.x != part.p.x) 
+						std::cout << "savep = " << savep << " | " << __LINE__ << std::endl;
 
-					changed = changed || (part.p.x != save_pos.x || part.p.y != save_pos.y || part.p.z != save_pos.z);
+					int3 grid_i = grid_indices_from_pos<>(hash_grid, part.p);
+
+					if (grid_i.x != kx || grid_i.y != ky || grid_i.z != kz) {
+						particles_indices.erase(particles_indices.begin() + pi);
+						hash_grid(grid_i).push_back(k);
+					}
 				}
 
-				particles_indices.clear();
+				if (particles_indices.size() > 0)
+					occupied_cells.push_back({ kx,ky,kz });
 			}
 		}
 	}
 
-	for (size_t i = 0; i < particles.size(); i++)
-	{
-		particle_structure part = particles[i];
-
-		int n_kx = (part.p.x + 1) * hash_grid.dimension.x / 2;
-		int n_ky = (part.p.y + 1) * hash_grid.dimension.y / 2;
-		int n_kz = (part.p.z + 1) * hash_grid.dimension.z / 2;
-
-		hash_grid(n_kx, n_ky, n_kz).push_back(i);
-	}
-
-	return changed;
+	return occupied_cells;
 }

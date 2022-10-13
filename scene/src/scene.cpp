@@ -36,13 +36,13 @@ void scene_structure::initialize()
 	// Initialization for the Implicit Surface
 	// ***************************************** //
 
-	int samples = 50;
+	int samples = field_function.h_size * 2;
 	cgp::vec3 cube_length = { cube_border_size*2, cube_border_size*2, cube_border_size*2 };
 
 	implicit_surface.set_domain(samples, cube_length);
 	implicit_surface.drawable_param.shape.material.color = {0.16,0.56,0.96};
 	
-	implicit_surface.update_field(field_function, isovalue);
+	//implicit_surface.update_field(field_function, isovalue);
 }
 
 
@@ -92,11 +92,11 @@ void scene_structure::display_frame()
 	}
 
 	// Call the simulation of the particle system
-	bool changed = simulate(field_function.particles, field_function.hash_grid, cube_faces, cube_normals, dt);
+	// Returns the occupied cells of the hash grid
+	std::vector<int3> cells = simulate(field_function.particles, field_function.hash_grid, cube_faces, cube_normals, dt);
 
 	// Recompute the implicit surface
-	if (changed)
-		implicit_surface.update_field(field_function, isovalue);
+	implicit_surface.update_field(field_function, cells, isovalue);
 
 	// Display the implicit surface
 	draw(implicit_surface.drawable_param.shape, environment);
@@ -112,7 +112,6 @@ void scene_structure::emit_particle()
 {
 	// Emit particle with random velocity
 	//  Assume first that all particles have the same radius and mass
-	static numarray<vec3> const color_lut = { {1,0,0},{0,1,0},{0,0,1},{1,1,0},{1,0,1},{0,1,1} };
 	if (timer.event && gui.add_sphere) {
 		float const theta = rand_interval(0, 2 * Pi);
 		vec3 const v = vec3(1.0f * std::cos(theta), 1.0f * std::sin(theta), 4.0f);
@@ -120,7 +119,6 @@ void scene_structure::emit_particle()
 		particle_structure particle;
 		particle.p = { 0,0,0 };
 		particle.r = 0.08f;
-		particle.c = {0.16,0.56,0.96}; // color_lut[int(rand_interval() * color_lut.size())];
 		particle.v = v;
 		particle.m = 1.0f; //
 

@@ -62,7 +62,7 @@ void implicit_surface_structure::update_marching_cube(float isovalue)
 
 
 
-void implicit_surface_structure::update_field(field_function_structure const& field_function, float isovalue)
+void implicit_surface_structure::update_field(field_function_structure const& field_function, std::vector<int3> &occupied_cells, float isovalue)
 {
 	// Variable shortcut
 	grid_3D<float>& field = field_param.field;
@@ -70,7 +70,7 @@ void implicit_surface_structure::update_field(field_function_structure const& fi
 	spatial_domain_grid_3D& domain = field_param.domain;
 
 	// Compute the scalar field
-	field = compute_discrete_scalar_field(domain, field_function);
+	field = compute_discrete_scalar_field(domain, field_function, occupied_cells);
 
 	// Compute the gradient of the scalar field
 	gradient = compute_gradient(field);
@@ -90,13 +90,36 @@ void implicit_surface_structure::set_domain(int samples, cgp::vec3 const& length
 
 
 
-grid_3D<float> compute_discrete_scalar_field(spatial_domain_grid_3D const& domain, field_function_structure const& func)
+grid_3D<float> compute_discrete_scalar_field(spatial_domain_grid_3D const& domain, field_function_structure const& func, std::vector<int3> &occupied_cells)
 {
 	grid_3D<float> field;
 	field.resize(domain.samples);
+	field.fill(0);
+
+	int grid_ratio = field.dimension.x / func.h_size;
+	for (int3 cell_pos : occupied_cells)
+	{
+		for (int i = -grid_ratio; i < grid_ratio*2; i++) {
+			for (int j = -grid_ratio; j < grid_ratio*2; j++) {
+				for (int k = -grid_ratio; k < grid_ratio*2; k++) {
+					int kx = cell_pos.x * grid_ratio + i;
+					int ky = cell_pos.y * grid_ratio + j;
+					int kz = cell_pos.z * grid_ratio + k;
+
+					if (kx < 0 || kx > field.dimension.x-1
+						|| ky < 0 || ky > field.dimension.y-1
+						|| kz < 0 || kz > field.dimension.z-1)
+						continue;
+
+					vec3 const p = domain.position({ kx, ky, kz });
+					field(kx, ky, kz) =  func(p);
+				}
+			}
+		}
+	}
 
 	// Fill the discrete field values
-	for (int kz = 0; kz < domain.samples.z; kz++) {
+	/*for (int kz = 0; kz < domain.samples.z; kz++) {
 		for (int ky = 0; ky < domain.samples.y; ky++) {
 			for (int kx = 0; kx < domain.samples.x; kx++) {
 
@@ -105,7 +128,7 @@ grid_3D<float> compute_discrete_scalar_field(spatial_domain_grid_3D const& domai
 
 			}
 		}
-	}
+	}*/
 
 	return field;
 }

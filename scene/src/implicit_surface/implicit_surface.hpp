@@ -42,7 +42,7 @@ struct implicit_surface_structure
 	// *************************************************** //
 
 	//   Recompute from scratch the field and the marching cube
-	void update_field(field_function_structure const& field_function, float isovalue);
+	void update_field(field_function_structure const& field_function, std::vector<cgp::int3> &occupied_cells, float isovalue);
 
 	//   Recompute only the marching cube for a different isovalue (while minimize re-allocations)
 	void update_marching_cube(float isovalue);
@@ -53,7 +53,7 @@ struct implicit_surface_structure
 
 
 // Compute a grid filled with the value of some scalar function - the size of the grid is given by the domain
-cgp::grid_3D<float> compute_discrete_scalar_field(cgp::spatial_domain_grid_3D const& domain, field_function_structure const& func);
+cgp::grid_3D<float> compute_discrete_scalar_field(cgp::spatial_domain_grid_3D const& domain, field_function_structure const& func, std::vector<cgp::int3> &occupied_cells);
 
 // Compute the gradient of the scalar field using finite differences on the voxels
 cgp::grid_3D<cgp::vec3> compute_gradient(cgp::grid_3D<float> const& field);

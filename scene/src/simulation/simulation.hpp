@@ -7,14 +7,14 @@ struct particle_structure
     cgp::vec3 p; // Position
     cgp::vec3 v; // Speed
 
-    cgp::vec3 c; // Color
     float r;     // Radius
+    float h;     // Kernel Radius
     float m;     // Magnitude
 };
 
-bool simulate(std::vector<particle_structure>& particles, 
-              cgp::grid_3D<std::vector<int>> &hash_grid,
-              std::vector<cgp::vec3> faces,
-              std::vector<cgp::vec3> normals,
-              float dt);
+std::vector<cgp::int3> simulate(std::vector<particle_structure>& particles, 
+                           cgp::grid_3D<std::vector<int>> &hash_grid,
+                           std::vector<cgp::vec3> faces,
+                           std::vector<cgp::vec3> normals,
+                           float dt);
 

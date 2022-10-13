@@ -18,7 +18,7 @@ struct field_function_structure {
 	// Parameters
 	// ***************************//
 
-	int max_particles = 25;
+	int max_particles = 500;
 	std::vector<particle_structure> particles;
 
 	int h_size = 12;
