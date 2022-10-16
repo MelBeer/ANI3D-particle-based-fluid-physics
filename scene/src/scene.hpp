@@ -32,7 +32,7 @@ struct scene_structure : scene_inputs_generic {
 	// Elements and shapes of the scene
 	// ****************************** //
 	cgp::timer_event_periodic timer;
-	float isovalue = 0.2f;
+	float isovalue = 0.05f;
 	implicit_surface_structure implicit_surface; // Structures used for the implicit surface (*)
 	field_function_structure field_function;     // A Parametric function used to generate the discrete field (*)
 	cgp::curve_drawable cube_wireframe;

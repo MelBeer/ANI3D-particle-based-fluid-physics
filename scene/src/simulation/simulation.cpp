@@ -5,7 +5,7 @@ using namespace cgp;
 #define ALPHA 0.8f
 #define BETA 0.8f
 #define MU 0.2f
-#define EPSILON 0.001f
+#define EPSILON 0.000001f
 
 template <class T>
 int3 grid_indices_from_pos(grid_3D<T> grid, vec3 pos) {
@@ -13,11 +13,40 @@ int3 grid_indices_from_pos(grid_3D<T> grid, vec3 pos) {
 	int ky = (pos.y + 1 - EPSILON) * grid.dimension.y / 2;
 	int kz = (pos.z + 1 - EPSILON) * grid.dimension.z / 2;
 
-	if (kx < 0 || ky < 0 || kz < 0)
+	bool debug = false;
+	if (kx < 0) { kx = 0; debug = true; }
+	if (ky < 0) { ky = 0; debug = true; }
+	if (kz < 0) { kz = 0; debug = true; }
+	if (kx >= grid.dimension.x) { kx = grid.dimension.x - 1; debug = true; }
+	if (ky >= grid.dimension.y) { ky = grid.dimension.y - 1; debug = true; }
+	if (kz >= grid.dimension.z) { kz = grid.dimension.z - 1; debug = true; }
+
+	if (debug)
 		std::cout << "HEeELP !! pos = " << pos << std::endl;
 
 	return { kx, ky, kz };
 };
+
+const float h9 = pow(h, 9.);
+const float h6 = pow(h, 6.);
+
+float Wh_poly_6(float d) {
+	if (d < 0 || d > h)
+		return 0.;
+	return 315. * pow(h*h - d*d, 3.) / (64.*M_PI*h9);
+}
+
+float nabla_Wh_spiky(float d) {
+	if (d < 0 || d > h)
+		return 0.;
+	return -45. * pow(h - d, 2.) / (M_PI * h6);
+}
+
+float triangle_Wh_spiky(float d) {
+	if (d < 0 || d > h)
+		return 0.;
+	return 45. * (h - d) / (M_PI * h6);
+}
 
 std::vector<int3> simulate(std::vector<particle_structure>& particles, 
 						   cgp::grid_3D<std::vector<int>> &hash_grid,
@@ -47,7 +76,12 @@ std::vector<int3> simulate(std::vector<particle_structure>& particles,
 					
 					particle_structure& part = particles[k];
 
-					vec3 const f = part.m * g;
+					float rho = 0.0f;
+					const float pressure = s * (part.rho - rho_0);
+
+					vec3 const F_weight = part.m * g;
+					vec3 F_pressure = vec3(0,0,0);
+					vec3 F_viscosity = vec3(0,0,0);
 
 					// For each neighbouring cell
 					for (int off_x = -1; off_x < 2; off_x++) {
@@ -67,34 +101,20 @@ std::vector<int3> simulate(std::vector<particle_structure>& particles,
 									int j = neighbour_particles_indices[pj];
 									if (j == k) continue;
 
-									particle_structure& part_1 = particles[j];
-									if (part.p.x == part_1.p.x && part.p.y == part_1.p.y && part.p.z == part_1.p.z)
-										part_1.p += 0.000001f;
+									particle_structure& part_j = particles[j];
+									
+									//std::cout << "v : " << part.v << " | p : " << part.p << std::endl;
+									vec3 dir = part.p - part_j.p;
+									float dist = norm(dir);
+									if (dist == 0.)
+										dist = EPSILON;
+									dir /= dist;
 
-									// If they collide
-									if (norm(part.p - part_1.p) <= (part.r + part_1.r) + EPSILON)
-									{
-										vec3 u = (part.p - part_1.p) / norm(part.p - part_1.p);
-
-										vec3 v_ortho = dot(part.v, u) * u;
-										vec3 v_par = part.v - v_ortho;
-										vec3 v1_ortho = dot(part_1.v, u) * u;
-										vec3 v1_par = part_1.v - v1_ortho;
-
-										if (norm(part.v) > EPSILON)
-											part.v = ALPHA * v_par + BETA * v1_ortho; // += dot(part_1.v - part.v, u) * u;
-										else
-											part.v = MU * part.v;
-
-										if (norm(part_1.v) > EPSILON)
-											part_1.v = ALPHA * v1_par + BETA * v_ortho; // -= dot(part_1.v - part.v, u) * u;
-										else
-											part_1.v = MU * part_1.v;
-
-										float d = part.r + part_1.r + EPSILON - norm(part.p - part_1.p);
-										part.p += d/2 * u;
-										part_1.p -= d/2 * u;
-									}
+									rho += part_j.m * Wh_poly_6(dist);
+									const float pressure_j = s * (part_j.rho - rho_0);
+									
+									F_pressure += part_j.m * ((pressure + pressure_j) / (2*part_j.rho)) * nabla_Wh_spiky(dist) * dir;
+									F_viscosity += part_j.m * ((part_j.v - part.v) / part_j.rho) * triangle_Wh_spiky(dist) * dir;
 								}
 							}
 						}
@@ -106,13 +126,25 @@ std::vector<int3> simulate(std::vector<particle_structure>& particles,
 						if (dist <= part.r)
 						{
 							part.p += (part.r - dist) * normals[i]; 
-							part.v = part.v - 2 * dot(part.v, normals[i]) * normals[i];
+							//part.v = part.v - 2 * dot(part.v, normals[i]) * normals[i];
+							vec3 f_wall = 1.4 * normals[i] * dot(-normals[i], part.v);
+							part.v += f_wall;
 						}
 					}
 
-					part.v = (1 - 0.9f * dt) * part.v + dt * f;
+					/*if (rho > 0 && rho < 1)
+						std::cout << "rho : " << rho << std::endl;*/
+
+					F_pressure *= -part.m / part.rho;
+					F_viscosity *= part.m * nu;
+
+					part.rho = rho > 0 ? rho : part.rho;
+
+					part.v += dt * (F_weight + F_pressure + F_viscosity) / part.m; // (1 - 0.9f * dt) * part.v + dt * f;
 					part.p = part.p + dt * part.v;
 
+					//std::cout << "v : " << part.v << " | p : " << part.p << std::endl;
+					//std::cout << "nb p : " << particles.size() << std::endl;
 					int3 grid_i = grid_indices_from_pos<>(hash_grid, part.p);
 
 					if (grid_i.x != kx || grid_i.y != ky || grid_i.z != kz) {
@@ -124,6 +156,8 @@ std::vector<int3> simulate(std::vector<particle_structure>& particles,
 							occupied_cells.push_back({ kx,ky,kz });
 						}
 					}
+
+					//std::cout << "\nNext Frame !\n" << std::endl;
 				}
 
 				if (particles_indices.size() > 0)

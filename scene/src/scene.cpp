@@ -120,7 +120,8 @@ void scene_structure::emit_particle()
 		particle.p = { 0,0,0 };
 		particle.r = 0.08f;
 		particle.v = v;
-		particle.m = 1.0f; //
+		particle.m = 0.5f;
+		particle.rho = 1.0f;
 
 		field_function.particles.push_back(particle);
 		field_function.hash_grid(field_function.h_size / 2, 
