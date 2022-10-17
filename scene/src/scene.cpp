@@ -98,6 +98,8 @@ void scene_structure::display_frame()
 	// Recompute the implicit surface
 	implicit_surface.update_field(field_function, cells, isovalue);
 
+	implicit_surface.drawable_param.shape.material.color = {0.16,0.56,0.96};
+
 	// Display the implicit surface
 	draw(implicit_surface.drawable_param.shape, environment);
 
