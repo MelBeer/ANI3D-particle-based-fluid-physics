@@ -22,7 +22,7 @@ cd build
 cmake ..
 make -j$(nproc)
 cd ..
-build/main
+./build/main
 ```
 
 ## Introduction
