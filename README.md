@@ -4,7 +4,8 @@ authors: melvin.gidel, melanie.tcheou
 date: 18/10/2022
 ---
 
-# Rapport ANI3D
+# Rapport ANI3D Particle based fluid physics
+
 * Melvin Gidel (melvin.gidel@epita.fr)
 * Mélanie Tchéou (melanie.tcheou@epita.fr)
 
