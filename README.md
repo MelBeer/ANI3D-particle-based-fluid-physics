@@ -39,7 +39,7 @@ Le projet est basé sur du rendu OpenGL, mais grâce au code déjà fourni, nous
 ## La scène
 La scène est composée d'un cube qui contiendra les particules de l'animation. Il s'agit donc du même que pour le TP. Des particules sont émises depuis son centre avec une vélocité et une direction aléatoire, tant que l'on n'a pas atteint la limite.
 
-![](https://i.imgur.com/GO2sHnP.png =300x) ![](https://i.imgur.com/ehsIFUP.png =300x)
+![](https://i.imgur.com/GO2sHnP.png) ![](https://i.imgur.com/ehsIFUP.png)
 
 ## Aparté : La suite du TP - Déplacer / Pivoter le cube
 
@@ -49,7 +49,7 @@ Il suffisait alors de register les inputs de l'utilisateur pour créer des matri
 Nous avions bind la touche LeftShift pour cette partie. Ainsi,  appuyer sur la touche LeftShift et bouger la souris faisait pivoter le cube autour de l'axe représenté par la viewDirection, et appuyer sur la touche LeftCtrl en plus faisait déplacer le cube sur le plande la caméra.
 
 Les opérations concernant la rotation était appliquées sur les faces et les normales, tandis que les normales n'étaient pas modifiées quand il s'agissait d'une translation.
-![](https://i.imgur.com/KMUSU8b.png =300x) ![](https://i.imgur.com/GRp5QfS.png =300x) 
+![](https://i.imgur.com/KMUSU8b.png) ![](https://i.imgur.com/GRp5QfS.png) 
 
 
 Cette partie n'a pas apporté de difficultées spéciales et, même si elle est toujours disponible dans le rendu final, elle n'en représente pas une feature officielle. En effet, pour optimiser le rendu, nous avons utilisé une structure accélératrice que l'on détaillera par la suite qui est limité au cube, ainsi quand on transforme ce dernier les particules sortent de l'environnement de calcul et on reçoit quelques overflow de mécontentement du programme.
